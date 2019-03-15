@@ -1,13 +1,26 @@
 'use strict';
 
 const express = require('express');
+const dns = require('dns')
 const mongo = require('mongodb');
 const mongoose = require('mongoose');
 const MongoClient = require('mongodb').MongoClient;
 const bodyParser = require('body-parser')
 const Schema = mongoose.Schema
+const uniq          = require('@trystal/uniq-ish')
+const URL = require('url');
 
+// const {validUrl} = require('./calcs')
 
+const validURL = (str) => {
+    var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+      '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+      '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+      '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+    return !!pattern.test(str);
+  }
 
 const cors = require('cors');
 
@@ -42,28 +55,55 @@ app.get('/', (req, res) => {
 
 const urlSchema = new Schema ({
     original_url: {type: String, required: true},
-    short_url: {type: Number, required: true}
+    short_url: {type: String, required: true}
 });
   
 const ShortURL = mongoose.model('Url', urlSchema)
-  
-
-
-// your first API endpoint... 
-app.get('/api/hello', function (req, res) {
-  res.json({greeting: 'hello API'});
-});
 
 app.post('/api/shorturl/new', (req,res,next) => {
-    console.log('req body',req.body)
-    const shortUrl =  new ShortURL({
-        original_url: req.body.url,
-        short_url: 5
+    console.log(req.body.url)
+    const urlParse = new URL(req.body.url);
+    console.log('URL:',urlParse)
+    dns.lookup(url.hostname, (err, address) => {
+        if(err){
+            console.log(err)
+            return res.json({error:'invalid URL'})
+        }
+        if(validURL(url)){
+            console.log('didnt pass')
+            return res.json({error:'invalid URL'})
+        }
+        console.log('URL VALID')
+        const shortUrlGen = uniq.randomId(5)
+        const shortUrl =  new ShortURL({
+            original_url: req.body.url,
+            short_url: shortUrlGen
+        })
+        // shortUrl.save( (err,data) => {
+        //     if(err){console.log('SAVE ERROR:',err)}
+        //     console.log('DATA:',data)
+        // });
+        const urlDisplay = {original_url:req.body.url, short_url: shortUrlGen}
+        res.json(urlDisplay)
     })
-    const urlDisplay = {original_url:req.body.url, short_url: 5}
-    res.json(urlDisplay)
 });
 
+app.get('/api/shorturl/something', (req,res) => {
+    const shortUrl = req.params.urlid
+    console.log('SHORT URL:',shortUrl)
+    ShortURL.findOne({short_url: shortUrl},(err,data) =>{
+        if(err){
+          console.log('QUERY ERROR:',err);
+        };
+        console.log('DATA',data.original_url)
+        res.redirect(data.original_url)
+      });
+
+});
+
+app.get('/api/testing/something', (req,res) => {
+    res.redirect(301,'google.ca')
+})
 
 app.listen(port, function () {
   console.log('Node.js listening on port', port);

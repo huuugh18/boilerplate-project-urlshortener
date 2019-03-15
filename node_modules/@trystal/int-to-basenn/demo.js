@@ -1,0 +1,10 @@
+"use strict";
+const index_1 = require("./index");
+console.log(index_1.base26Encode(1000));
+console.log(index_1.base26Decode('A'));
+console.log(index_1.base26Decode('B'));
+console.log(index_1.base26Decode('AB'));
+console.log(index_1.base26Decode('AAB'));
+console.log(index_1.base26Decode('BA'));
+console.log(index_1.base26Decode('BB'));
+console.log(index_1.base26Decode('BAA'));
