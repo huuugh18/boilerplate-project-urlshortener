@@ -8,7 +8,7 @@ const MongoClient = require('mongodb').MongoClient;
 const bodyParser = require('body-parser')
 const Schema = mongoose.Schema
 const uniq          = require('@trystal/uniq-ish')
-const URL = require('url');
+const url = require('url');
 
 // const {validUrl} = require('./calcs')
 
@@ -62,48 +62,41 @@ const ShortURL = mongoose.model('Url', urlSchema)
 
 app.post('/api/shorturl/new', (req,res,next) => {
     console.log(req.body.url)
-    const urlParse = new URL(req.body.url);
-    console.log('URL:',urlParse)
-    dns.lookup(url.hostname, (err, address) => {
+    const url = new URL(req.body.url);
+    console.log('URL:',url)
+    dns.lookup(url.host, (err, address) => {
+        // if dns lookup returns error
         if(err){
             console.log(err)
             return res.json({error:'invalid URL'})
         }
-        if(validURL(url)){
-            console.log('didnt pass')
-            return res.json({error:'invalid URL'})
-        }
         console.log('URL VALID')
         const shortUrlGen = uniq.randomId(5)
-        const shortUrl =  new ShortURL({
+        // create database object
+        const shortUrlDB =  new ShortURL({
             original_url: req.body.url,
             short_url: shortUrlGen
         })
-        // shortUrl.save( (err,data) => {
-        //     if(err){console.log('SAVE ERROR:',err)}
-        //     console.log('DATA:',data)
-        // });
-        const urlDisplay = {original_url:req.body.url, short_url: shortUrlGen}
+        // save to database
+        shortUrlDB.save( (err,data) => {
+            if(err){console.log('SAVE ERROR:',err)}
+            console.log('DATA:',data)
+        });
+        // display output after successful displayy
+        const urlDisplay = {original_url:url.href, short_url: shortUrlGen}
         res.json(urlDisplay)
     })
 });
 
-app.get('/api/shorturl/something', (req,res) => {
+app.get('/api/shorturl/:urlid', (req,res) => {
     const shortUrl = req.params.urlid
     console.log('SHORT URL:',shortUrl)
     ShortURL.findOne({short_url: shortUrl},(err,data) =>{
-        if(err){
-          console.log('QUERY ERROR:',err);
-        };
+        if(err){console.log('QUERY ERROR:',err)};
         console.log('DATA',data.original_url)
         res.redirect(data.original_url)
-      });
-
+    });
 });
-
-app.get('/api/testing/something', (req,res) => {
-    res.redirect(301,'google.ca')
-})
 
 app.listen(port, function () {
   console.log('Node.js listening on port', port);
